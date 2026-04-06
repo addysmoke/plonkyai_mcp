@@ -69,3 +69,7 @@ python server.py
 ## Credits
 
 Each forecast costs 1 credit. Backtests cost dimensions × period_count credits. New accounts start with 50 credits. Top up at [plonky.ai/billing](https://plonky.ai/billing) for $0.33/credit.
+
+## Data Granularity
+
+The forecasting engine operates at **daily granularity**. All input data is converted to a daily time series internally, and forecast output is always daily. Daily or sub-daily data works best. Weekly or monthly data is accepted but gaps between observations are zero-filled, which reduces forecast accuracy. The `periods` parameter in `create_forecast` is the number of future **days** to forecast.

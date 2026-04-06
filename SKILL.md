@@ -32,7 +32,8 @@ Before reaching for Plonky, assess whether a statistical forecast is the right t
 - **Brand-new products or markets** with <2 months of data. No model can extrapolate from nothing — suggest manual estimates or analogous-product benchmarking instead.
 - **One-off or event-driven outcomes** (will this product launch succeed? what will Q4 revenue be if we change pricing?). These are decisions, not time-series patterns.
 - **Highly irregular or random data** where past patterns have no predictive value (e.g., individual customer churn dates, lottery outcomes). If the data looks like noise, say so.
-- **Real-time or sub-hourly granularity**. Plonky is designed for daily/weekly/monthly series.
+- **Real-time or sub-hourly granularity**. Plonky is designed for daily-granularity series.
+- **Weekly or monthly data** can be used but results will be less reliable. Plonky internally converts all data to a daily time series (filling gaps with zeros or forward-fill). With monthly input, this creates ~30 artificial data points per real observation, which degrades forecast quality. If the user only has monthly data, warn them that results are directional estimates at best.
 - **Data dominated by external decisions** (marketing spend, pricing changes, policy shifts). A univariate forecast won't capture interventions — the user needs causal modeling or scenario analysis, not extrapolation.
 
 When in doubt, run the forecast and a backtest. If MAPE is >30%, the data may not be forecastable — tell the user honestly.
@@ -47,7 +48,13 @@ Before doing anything else, call `get_credits`. If it succeeds, you are already 
 
 ### Step 1: Data Preparation
 
-Before uploading, inspect the data for common issues:
+**Important: Plonky's forecasting engine is built for daily (or sub-daily) data.** Internally, all data is reindexed to a daily time series before modeling. If the input is weekly or monthly, the gaps between observations are filled (zero-fill or forward-fill), which creates many artificial data points and degrades forecast quality. The forecast output is always daily-granularity regardless of input frequency.
+
+- **Daily data** → best results, this is what the model is designed for.
+- **Weekly data** → usable but warn the user that accuracy will be lower.
+- **Monthly data** → forecasts will be unreliable. Tell the user: "Plonky works best with daily data. With monthly input, the forecast is a rough directional estimate only."
+
+Before uploading, also inspect for common issues:
 
 - **Date column**: Must be parseable dates (YYYY-MM-DD preferred). If dates are in a non-standard format, reformat before uploading.
 - **Value column**: Must be numeric. Remove currency symbols, commas, or text.
@@ -64,6 +71,7 @@ Before uploading, inspect the data for common issues:
    - Is the date column detected correctly?
    - Are there quality issues (nulls, gaps, low row count)?
    - What does the value distribution look like?
+   - **Check `detected_frequency`**. If the data is weekly or monthly, warn the user: "Plonky is optimized for daily data. With [weekly/monthly] input, results will be less reliable." If monthly, strongly recommend the user try to source daily data instead.
 
 Report findings to the user before proceeding.
 
@@ -138,10 +146,12 @@ When using dimensions, always include an aggregate forecast (`include_aggregate=
 
 Default settings work well for most data. Only adjust when you have a reason:
 
-- **periods**: Default 90 days. Match to the user's planning horizon.
+- **periods**: Default 90 days. This is always in **days** — the forecast output is daily regardless of input frequency. Match to the user's planning horizon (e.g., 30 for one month ahead, 365 for one year).
 - **weekly_seasonality**: Enable for daily data with day-of-week patterns (retail, web traffic). Disable for monthly or weekly data.
 - **yearly_seasonality**: Enable for data spanning 2+ years with seasonal patterns. Disable for short time series (<1 year).
 - **use_holidays**: Enable for US business data (sales, traffic, operations). Disable for non-US data or data not affected by holidays.
+
+**If input data is monthly or weekly**: Disable weekly_seasonality (it's meaningless for non-daily data). Consider reducing the forecast periods to match the user's horizon rather than leaving the default 90 days. When presenting results to the user, summarize at the original granularity (e.g., aggregate daily forecasts into monthly totals) rather than showing hundreds of daily rows.
 
 For the first forecast, use defaults. Only fine-tune after reviewing backtest results.
 

@@ -231,13 +231,19 @@ def create_forecast(
     dataset_id: Annotated[int, "Dataset ID to forecast"],
     date_column: Annotated[str, "Name of the date column"],
     value_column: Annotated[str, "Name of the value column to forecast"],
-    periods: Annotated[int, "Number of future periods to forecast"] = 90,
+    periods: Annotated[int, "Number of future daily periods to forecast"] = 90,
     weekly_seasonality: Annotated[bool, "Enable weekly seasonality"] = True,
     yearly_seasonality: Annotated[bool, "Enable yearly seasonality"] = True,
     use_holidays: Annotated[bool, "Include US holiday effects"] = True,
     name: Annotated[Optional[str], "Name for this forecast"] = None,
 ) -> str:
-    """Create a time-series forecast. Polls until complete and returns results."""
+    """Create a time-series forecast. Polls until complete and returns results.
+
+    The model operates at daily granularity — all data is converted to a daily
+    time series internally, and the forecast output is daily.  Daily or sub-daily
+    input data works best.  Weekly or monthly input is accepted but forecast
+    quality will be lower because gaps between observations are zero-filled.
+    The 'periods' parameter is the number of future *days* to forecast."""
     payload = {
         "dataset_id": dataset_id,
         "value_column": value_column,
