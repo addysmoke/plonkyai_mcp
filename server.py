@@ -8,19 +8,45 @@ Run:     python server.py            (stdio transport — for Claude Desktop, Cu
 Configuration via environment variables:
   PLONKY_API_KEY  — your Plonky API key (plk_...)
   PLONKY_API_URL  — API base URL (default: https://forecastingbase.onrender.com/api/v1)
+
+The API key is resolved in order: PLONKY_API_KEY env var > ~/.plonky/api_key file.
+On first registration the key is saved to ~/.plonky/api_key automatically.
 """
 
 import os
 import time
+from pathlib import Path
 from typing import Annotated, Optional
 
 import httpx
 from fastmcp import FastMCP
 
 API_URL = os.environ.get("PLONKY_API_URL", "https://forecastingbase.onrender.com/api/v1")
-API_KEY = os.environ.get("PLONKY_API_KEY", "")
 POLL_INTERVAL = 2
 MAX_POLLS = 150
+
+KEY_FILE = Path.home() / ".plonky" / "api_key"
+
+
+def _load_api_key() -> str:
+    """Load API key from env var or persisted key file."""
+    env_key = os.environ.get("PLONKY_API_KEY", "").strip()
+    if env_key:
+        return env_key
+    if KEY_FILE.exists():
+        stored = KEY_FILE.read_text().strip()
+        if stored:
+            return stored
+    return ""
+
+
+def _save_api_key(key: str) -> None:
+    """Persist API key to ~/.plonky/api_key for future runs."""
+    KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    KEY_FILE.write_text(key)
+
+
+API_KEY = _load_api_key()
 
 mcp = FastMCP(
     name="Plonky Forecasting",
@@ -103,11 +129,28 @@ def _format_forecast_table(forecast: list[dict], max_rows: int = 20) -> str:
 def register(
     email: Annotated[str, "Email address for the new Plonky account"],
 ) -> str:
-    """Create a new Plonky account and get an API key. The human can later
-    claim the account by using 'Forgot Password' at the login page."""
+    """Create a new Plonky account and get an API key. If already authenticated,
+    returns the current balance instead of creating a duplicate account. The human
+    can later claim the account by using 'Forgot Password' at the login page."""
+    global API_KEY
+    if API_KEY:
+        try:
+            data = _get("/credits/balance")
+            balance = data.get("balance", "?")
+            return (
+                f"Already authenticated. Credits: {balance}. "
+                "No need to register again. Use get_credits for details."
+            )
+        except httpx.HTTPStatusError:
+            pass  # key is stale/revoked — fall through to registration
+
     data = _post("/agent/register", {"email": email})
     if "error" in data:
         return f"Registration failed: {data.get('detail', data['error'])}"
+
+    API_KEY = data["api_key"]
+    _save_api_key(API_KEY)
+
     return (
         f"Account created for {data['email']}.\n"
         f"API Key: {data['api_key']}\n"

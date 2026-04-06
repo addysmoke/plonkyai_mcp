@@ -18,6 +18,14 @@ export PLONKY_API_KEY="plk_your_key_here"
 
 Don't have a key? The `register` tool can create an account and return one, or sign up at [plonky.ai](https://plonky.ai) and generate a key in Settings.
 
+### Automatic key persistence
+
+If no `PLONKY_API_KEY` env var is set, the server checks `~/.plonky/api_key`. When you register through the `register` tool, the key is saved there automatically so subsequent runs reuse the same account. To reset, delete the file:
+
+```bash
+rm ~/.plonky/api_key
+```
+
 ## Usage
 
 ### Claude Desktop / Cursor
