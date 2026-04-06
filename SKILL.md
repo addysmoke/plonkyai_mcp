@@ -1,3 +1,15 @@
+---
+name: plonky-forecasting
+description: >
+  End-to-end time-series forecasting via the Plonky API. Covers data preparation,
+  upload, quality analysis, forecast configuration, backtesting, and result
+  interpretation. Use when the user wants to forecast revenue, demand, traffic,
+  or any recurring metric over time.
+metadata:
+  author: plonky
+  version: "1.0"
+---
+
 # Plonky Forecasting Skill
 
 You are using Plonky, a time-series forecasting API. This skill teaches you the end-to-end forecasting workflow — from data preparation to interpreting results.
