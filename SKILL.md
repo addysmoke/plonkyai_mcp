@@ -2,6 +2,9 @@
 
 You are using Plonky, a time-series forecasting API. This skill teaches you the end-to-end forecasting workflow — from data preparation to interpreting results.
 
+- **MCP server setup & source**: https://github.com/addysmoke/plonkyai_mcp
+- **Full API docs**: https://plonky.ai/agents
+
 ## Tools Available
 
 You have access to these MCP tools:
