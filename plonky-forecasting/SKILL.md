@@ -26,7 +26,7 @@ You have access to these MCP tools:
 - `upload_data` — upload CSV data
 - `list_datasets` — see uploaded datasets
 - `analyze_dataset` — get summary stats and data quality info
-- `create_forecast` — run a forecast (blocks until complete)
+- `create_forecast` — run a forecast (blocks until complete). Supports `handle_missing` and `forecast_negative_handling` flags
 - `get_forecast` — retrieve results for an existing forecast
 - `create_backtest` — evaluate forecast accuracy (period_count + period_type, not n_splits)
 - `create_forecast_batch` — forecast across multiple dimensions
@@ -112,14 +112,44 @@ When using dimensions, always include an aggregate forecast (`include_aggregate=
 
 ### Step 5: Configure the Forecast
 
-Default settings work well for most data. Only adjust when you have a reason:
+Default settings work well for most data. Only adjust when you have a reason.
 
-- **periods**: Default 90 days. This is always in **days** — the forecast output is daily regardless of input frequency. Match to the user's planning horizon (e.g., 30 for one month ahead, 365 for one year).
+#### Seasonality & holidays
+
 - **weekly_seasonality**: Enable for daily data with day-of-week patterns (retail, web traffic). Disable for monthly or weekly data.
 - **yearly_seasonality**: Enable for data spanning 2+ years with seasonal patterns. Disable for short time series (<1 year).
 - **use_holidays**: Enable for US business data (sales, traffic, operations). Disable for non-US data or data not affected by holidays.
 
-**If input data is monthly or weekly**: Disable weekly_seasonality (it's meaningless for non-daily data). Consider reducing the forecast periods to match the user's horizon rather than leaving the default 90 days. When presenting results to the user, summarize at the original granularity (e.g., aggregate daily forecasts into monthly totals) rather than showing hundreds of daily rows.
+#### Forecast horizon
+
+- **periods**: Default 90 days. This is always in **days** — the forecast output is daily regardless of input frequency. Match to the user's planning horizon (e.g., 30 for one month ahead, 365 for one year).
+
+#### Missing data handling (`handle_missing`)
+
+Controls how gaps in the time series are filled before modeling. The engine reindexes all data to daily, so any day without an observation is a "gap."
+
+| Value | Behavior | When to use |
+|-------|----------|-------------|
+| `"zero"` (default) | Fill missing days with 0 | Revenue, sales, counts — a day with no activity genuinely had zero value |
+| `"forward_fill"` | Carry the last known value forward | Metrics that persist (inventory level, subscriber count, price) — absence of a new reading means "unchanged" |
+| `"drop"` | Exclude missing days entirely | Sparse or irregular data where filling would create misleading patterns (e.g., sensor data with intentional gaps) |
+
+**Rule of thumb**: If the metric can logically be zero on a day with no data, use `"zero"`. If it represents a level or balance, use `"forward_fill"`. If unsure, leave the default.
+
+#### Negative forecast handling (`forecast_negative_handling`)
+
+Controls whether the model can predict negative values.
+
+| Value | Behavior | When to use |
+|-------|----------|-------------|
+| `"allow"` (default) | Negative predictions are kept as-is | Metrics that can genuinely go negative (profit/loss, net change, temperature) |
+| `"replace_zero"` | Negative predictions are clamped to 0 | Metrics that cannot be negative (revenue, unit sales, page views, headcount). Use this when negative values would be nonsensical |
+
+**Rule of thumb**: If the user would never see a negative number in the real data, set `"replace_zero"`.
+
+#### Monthly/weekly input
+
+If input data is monthly or weekly: disable `weekly_seasonality` (meaningless for non-daily data). Consider reducing periods to match the user's horizon rather than the default 90. When presenting results, summarize at the original granularity (e.g., aggregate daily forecasts into monthly totals) rather than showing hundreds of daily rows.
 
 For the first forecast, use defaults. Only fine-tune after reviewing backtest results.
 

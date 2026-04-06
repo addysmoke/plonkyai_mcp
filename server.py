@@ -226,6 +226,10 @@ def analyze_dataset(
     return "\n".join(parts)
 
 
+VALID_HANDLE_MISSING = {"zero", "forward_fill", "drop"}
+VALID_NEGATIVE_HANDLING = {"allow", "replace_zero"}
+
+
 @mcp.tool
 def create_forecast(
     dataset_id: Annotated[int, "Dataset ID to forecast"],
@@ -235,6 +239,8 @@ def create_forecast(
     weekly_seasonality: Annotated[bool, "Enable weekly seasonality"] = True,
     yearly_seasonality: Annotated[bool, "Enable yearly seasonality"] = True,
     use_holidays: Annotated[bool, "Include US holiday effects"] = True,
+    handle_missing: Annotated[str, "How to fill missing dates: 'zero' (default), 'forward_fill', or 'drop'"] = "zero",
+    forecast_negative_handling: Annotated[str, "Negative forecast values: 'allow' (default) or 'replace_zero'"] = "allow",
     name: Annotated[Optional[str], "Name for this forecast"] = None,
 ) -> str:
     """Create a time-series forecast. Polls until complete and returns results.
@@ -244,6 +250,11 @@ def create_forecast(
     input data works best.  Weekly or monthly input is accepted but forecast
     quality will be lower because gaps between observations are zero-filled.
     The 'periods' parameter is the number of future *days* to forecast."""
+    if handle_missing not in VALID_HANDLE_MISSING:
+        return f"Invalid handle_missing '{handle_missing}'. Must be one of: {', '.join(sorted(VALID_HANDLE_MISSING))}"
+    if forecast_negative_handling not in VALID_NEGATIVE_HANDLING:
+        return f"Invalid forecast_negative_handling '{forecast_negative_handling}'. Must be one of: {', '.join(sorted(VALID_NEGATIVE_HANDLING))}"
+
     payload = {
         "dataset_id": dataset_id,
         "value_column": value_column,
@@ -255,6 +266,8 @@ def create_forecast(
             },
             "use_us_holidays": use_holidays,
         },
+        "data_prep_config": {"handle_missing": handle_missing},
+        "forecast_negative_handling": forecast_negative_handling,
     }
     if name:
         payload["name"] = name
@@ -355,10 +368,17 @@ def create_forecast_batch(
     value_column: Annotated[str, "Value column to forecast"],
     dimension_column: Annotated[str, "Column to split by (e.g. 'region', 'product')"],
     dimension_values: Annotated[list[str], "Values to forecast (e.g. ['US', 'UK', 'DE'])"],
-    periods: Annotated[int, "Forecast periods"] = 90,
+    periods: Annotated[int, "Forecast periods (days)"] = 90,
     include_aggregate: Annotated[bool, "Also create an aggregate (total) forecast"] = True,
+    handle_missing: Annotated[str, "How to fill missing dates: 'zero' (default), 'forward_fill', or 'drop'"] = "zero",
+    forecast_negative_handling: Annotated[str, "Negative forecast values: 'allow' (default) or 'replace_zero'"] = "allow",
 ) -> str:
     """Create forecasts for multiple dimension values in one batch."""
+    if handle_missing not in VALID_HANDLE_MISSING:
+        return f"Invalid handle_missing '{handle_missing}'. Must be one of: {', '.join(sorted(VALID_HANDLE_MISSING))}"
+    if forecast_negative_handling not in VALID_NEGATIVE_HANDLING:
+        return f"Invalid forecast_negative_handling '{forecast_negative_handling}'. Must be one of: {', '.join(sorted(VALID_NEGATIVE_HANDLING))}"
+
     combinations = []
     if include_aggregate:
         combinations.append({"dimension_values": None})
@@ -370,6 +390,8 @@ def create_forecast_batch(
         "value_column": value_column,
         "periods": periods,
         "combinations": combinations,
+        "data_prep_config": {"handle_missing": handle_missing},
+        "forecast_negative_handling": forecast_negative_handling,
     }
 
     result = _post("/jobs/batch", payload)
