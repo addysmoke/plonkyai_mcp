@@ -73,3 +73,7 @@ Each forecast costs 1 credit. Backtests cost dimensions × period_count credits.
 ## Data Granularity
 
 The forecasting engine operates at **daily granularity**. All input data is converted to a daily time series internally, and forecast output is always daily. Daily or sub-daily data works best. Weekly or monthly data is accepted but gaps between observations are zero-filled, which reduces forecast accuracy. The `periods` parameter in `create_forecast` is the number of future **days** to forecast.
+
+## Agent Skill
+
+The `plonky-forecasting/` directory contains an [Agent Skill](https://agentskills.io/specification) with the full workflow guide. Point your agent at `plonky-forecasting/SKILL.md` for end-to-end instructions.
