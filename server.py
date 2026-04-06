@@ -289,15 +289,37 @@ def get_forecast(
     return f"**Forecast {job_id}** — {data.get('value_column', '?')}\n\n{table}"
 
 
+VALID_PERIOD_TYPES = ("days", "weeks", "months", "quarters", "years")
+
+
 @mcp.tool
 def create_backtest(
     forecast_job_id: Annotated[int, "Forecast job ID to backtest"],
-    n_splits: Annotated[int, "Number of cross-validation splits"] = 3,
+    period_count: Annotated[int, "Number of periods to hold out (e.g. 3 for 'last 3 months')"] = 3,
+    period_type: Annotated[str, "Period granularity: days, weeks, months, quarters, or years"] = "months",
 ) -> str:
-    """Run a backtest on a completed forecast to evaluate accuracy. Polls until complete."""
+    """Run a backtest on a completed forecast to evaluate accuracy.
+
+    Tests how well the model would have predicted the most recent data by
+    hiding it and comparing predictions to actuals.  Polls until complete.
+
+    Choosing settings:
+      - daily data   → period_type='weeks' or 'months', period_count=3-6
+      - weekly data  → period_type='months', period_count=3-6
+      - monthly data → period_type='months', period_count=3-6
+
+    Cost: dimensions × period_count credits.
+    """
+    if period_type not in VALID_PERIOD_TYPES:
+        return (
+            f"Invalid period_type '{period_type}'. "
+            f"Must be one of: {', '.join(VALID_PERIOD_TYPES)}"
+        )
+
     result = _post("/backtests/", {
         "forecast_job_id": forecast_job_id,
-        "n_splits": n_splits,
+        "period_count": period_count,
+        "period_type": period_type,
     })
     if "error" in result:
         return f"Failed to create backtest: {result}"
@@ -308,7 +330,7 @@ def create_backtest(
         return f"Backtest failed: {data['error']}"
 
     metrics = data.get("metrics", data.get("result", {}))
-    parts = [f"**Backtest {bt_id}** (forecast job {forecast_job_id}, {n_splits} splits)\n"]
+    parts = [f"**Backtest {bt_id}** (forecast job {forecast_job_id}, {period_count} {period_type})\n"]
     if isinstance(metrics, dict):
         for k, v in metrics.items():
             if isinstance(v, (int, float)):

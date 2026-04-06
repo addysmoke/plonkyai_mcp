@@ -15,7 +15,7 @@ You have access to these MCP tools:
 - `analyze_dataset` — get summary stats and data quality info
 - `create_forecast` — run a forecast (blocks until complete)
 - `get_forecast` — retrieve results for an existing forecast
-- `create_backtest` — evaluate forecast accuracy
+- `create_backtest` — evaluate forecast accuracy (period_count + period_type, not n_splits)
 - `create_forecast_batch` — forecast across multiple dimensions
 
 ## When to Use Forecasting
@@ -155,7 +155,11 @@ For the first forecast, use defaults. Only fine-tune after reviewing backtest re
 
 Always run a backtest after the first forecast. This tells you how accurate the model is.
 
-1. Call `create_backtest` with the forecast job ID.
+1. Call `create_backtest` with the forecast job ID, `period_count`, and `period_type`.
+   - **daily data** → `period_type="months"`, `period_count=3` (holds out 3 months of actuals)
+   - **weekly data** → `period_type="months"`, `period_count=3`
+   - **monthly data** → `period_type="months"`, `period_count=6`
+   - Valid period types: `days`, `weeks`, `months`, `quarters`, `years`
 2. Review the metrics.
 
 **Interpreting backtest metrics:**
@@ -205,6 +209,6 @@ When presenting forecast results to the user:
 ## Credit Costs
 
 - 1 credit per forecast
-- Backtests: dimensions × splits credits
+- Backtests: dimensions × period_count credits
 - New accounts: 50 credits
 - Top-ups: $0.33 per credit at https://plonky.ai/billing

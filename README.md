@@ -68,4 +68,4 @@ python server.py
 
 ## Credits
 
-Each forecast costs 1 credit. Backtests cost dimensions x splits credits. New accounts start with 50 credits. Top up at [plonky.ai/billing](https://plonky.ai/billing) for $0.33/credit.
+Each forecast costs 1 credit. Backtests cost dimensions × period_count credits. New accounts start with 50 credits. Top up at [plonky.ai/billing](https://plonky.ai/billing) for $0.33/credit.
